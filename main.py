@@ -42,12 +42,12 @@ def format_html_for_telegram(text: str) -> str:
         return ""
 
     text = html.escape(text)
-    text = re.sub(r"^### (.+)$", r"<b>\1</b>", text, flags=re.MULTILINE)
-    text = re.sub(r"^#### (.+)$", r"<i>\1</i>", text, flags=re.MULTILINE)
-    text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text)
-    text = re.sub(r"_(.+?)_", r"<i>\1</i>", text)
-    text = re.sub(r"^- (.+)$", r"• \1", text, flags=re.MULTILINE)
-    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r"^### (.+)$", r"<b>\\1</b>", text, flags=re.MULTILINE)
+    text = re.sub(r"^#### (.+)$", r"<i>\\1</i>", text, flags=re.MULTILINE)
+    text = re.sub(r"\\*\\*(.+?)\\*\\*", r"<b>\\1</b>", text)
+    text = re.sub(r"_(.+?)_", r"<i>\\1</i>", text)
+    text = re.sub(r"^- (.+)$", r"• \\1", text, flags=re.MULTILINE)
+    text = re.sub(r"\\n{3,}", "\\n\\n", text)
     return text.strip()
 
 # -----------------------------------------
@@ -131,7 +131,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(text="✅ Публикация одобрена. Отправляю в канал...")
 
         try:
-            # Берём оригинальный форматированный текст
             formatted_text = DRAFTS.get(msg_id)
             if not formatted_text:
                 logger.warning("⚠️ Не найден черновик для публикации.")
@@ -176,6 +175,24 @@ async def start_bot():
 if __name__ == "__main__":
     import nest_asyncio
     nest_asyncio.apply()
+
+    # --- ФИКТИВНЫЙ HTTP СЕРВЕР ДЛЯ RENDER ---
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    import os
+
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"Bot is running")
+
+    def run_http_server():
+        port = int(os.environ.get("PORT", 10000))
+        server = HTTPServer(("0.0.0.0", port), HealthHandler)
+        server.serve_forever()
+
+    threading.Thread(target=run_http_server, daemon=True).start()
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(start_bot())
